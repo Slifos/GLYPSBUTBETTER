@@ -1,0 +1,11 @@
+{
+  "name": "statistics-service",
+  "version-string": "1.0.0",
+  "description": "Stateless gRPC service for campus event statistics",
+  "dependencies": [
+    "grpc",
+    "protobuf",
+    "spdlog",
+    "gtest"
+  ]
+}

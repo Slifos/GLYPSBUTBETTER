@@ -1,0 +1,6 @@
+.git
+.gitignore
+build
+cmake-build-*
+vcpkg
+vcpkg_installed

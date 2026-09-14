@@ -98,6 +98,29 @@ The business tests call `StatisticsService` directly. Separate transport tests
 verify protobuf response mapping and gRPC error status conversion. None of the
 tests starts a network server.
 
+## CI/CD
+
+The GitHub Actions workflow in `.github/workflows/ci-cd.yml` builds and tests the
+service on every push and on pull requests targeting `main`.
+
+After the tests pass, pushes to `main` publish a production container image to
+GitHub Container Registry with `latest` and commit SHA tags. Tags beginning with
+`v` (for example, `v1.2.0`) also publish versioned image tags. The image name is:
+
+```text
+ghcr.io/<owner>/<repository>-statistics-service
+```
+
+The workflow authenticates with GitHub's built-in `GITHUB_TOKEN`, so it does not
+need a manually created secret. If publishing is denied, check the repository's
+**Settings > Actions > General > Workflow permissions** and allow workflows to
+have read and write permissions.
+
+To require CI before merging, add a branch protection rule for `main` and make
+the **Build and test** check required. Publishing to the registry is continuous
+delivery; deploying the image to a server or cloud platform requires a separate
+job for that chosen target.
+
 ## API
 
 The service exposes the unary RPC:

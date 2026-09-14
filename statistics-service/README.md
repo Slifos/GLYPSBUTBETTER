@@ -71,20 +71,24 @@ server if necessary.
 
 ## Run
 
-Start the server from the repository root:
+Start the server from the repository root after building the service:
 
 ```bash
-./build/statistics_service
+./statistics-service/build/statistics_service
 ```
 
 It listens on `0.0.0.0:9090`.
 
-To build and run it with Docker instead:
+To build and run it with Docker instead, from the repository root:
 
 ```bash
-docker build -t statistics-service .
+docker build -t statistics-service statistics-service
 docker run --rm -p 9090:9090 statistics-service
 ```
+
+The Docker build installs Ubuntu's precompiled gRPC, Protobuf, spdlog, and
+GoogleTest packages instead of compiling them through vcpkg. It also runs the
+complete test suite before producing the smaller runtime image.
 
 ## Tests
 
@@ -172,3 +176,64 @@ grpcurl -plaintext \
 Invalid participant values return gRPC `INVALID_ARGUMENT`. Unexpected service
 errors are logged and returned as `INTERNAL` without exposing implementation
 details.
+
+### Detailed event analytics
+
+`AnalyzeEvent` accepts an `EventData` snapshot and its registration history. It
+returns:
+
+- cancellation and actual attendance rates;
+- registration totals grouped by UTC day and ISO-style week starting Monday;
+- average registrations per day;
+- an estimated full date based on the observed linear registration rate;
+- cumulative capacity alerts when occupancy reaches 80%, 90%, and 100%.
+
+The cancellation rate is `cancelled / (current + cancelled)`. The attendance
+rate is `attended / current`. The estimate is returned as Unix epoch seconds;
+zero means that the supplied history is insufficient to make an estimate.
+
+```text
+campusconnect.statistics.StatisticsService/AnalyzeEvent
+```
+
+Example request:
+
+```json
+{
+  "event": {
+    "eventId": "42",
+    "eventType": "workshop",
+    "maxParticipants": 100,
+    "currentParticipants": 85,
+    "cancelledParticipants": 5,
+    "attendedParticipants": 70,
+    "registrationHistory": [
+      {"timestampEpochSeconds": "1788998400", "registrations": 40},
+      {"timestampEpochSeconds": "1789084800", "registrations": 45}
+    ]
+  },
+  "asOfEpochSeconds": "1789171200"
+}
+```
+
+### Administrator dashboard
+
+`GetDashboardStatistics` accepts several event snapshots and returns:
+
+- comparable metrics for every event;
+- a popularity ranking ordered by active participant count, then occupancy;
+- average participant and attendance values grouped by event type;
+- a recommended capacity per type;
+- global counts and weighted occupancy, cancellation, and attendance rates.
+
+Recommended capacity is the average observed demand (`current + cancelled`) for
+an event type plus a 10% buffer, rounded up. `popular_events_limit` limits the
+ranking; zero returns all supplied events.
+
+```text
+campusconnect.statistics.StatisticsService/GetDashboardStatistics
+```
+
+Both new operations are stateless. The event service remains responsible for
+storing registrations, cancellations, attendance, and timestamps, and supplies
+those values whenever it requests statistics.

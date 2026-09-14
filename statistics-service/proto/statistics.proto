@@ -5,6 +5,10 @@ package campusconnect.statistics;
 service StatisticsService {
   rpc GetEventStatistics(EventStatisticsRequest)
       returns (EventStatisticsResponse);
+  rpc AnalyzeEvent(EventAnalyticsRequest)
+      returns (EventAnalyticsResponse);
+  rpc GetDashboardStatistics(DashboardStatisticsRequest)
+      returns (DashboardStatisticsResponse);
 }
 
 message EventStatisticsRequest {
@@ -17,4 +21,112 @@ message EventStatisticsResponse {
   int32 remaining_places = 1;
   double occupancy_rate = 2;
   bool full = 3;
+}
+
+message RegistrationRecord {
+  int64 timestamp_epoch_seconds = 1;
+  int32 registrations = 2;
+}
+
+message EventData {
+  int64 event_id = 1;
+  string event_type = 2;
+  int32 max_participants = 3;
+  int32 current_participants = 4;
+  int32 cancelled_participants = 5;
+  int32 attended_participants = 6;
+  repeated RegistrationRecord registration_history = 7;
+}
+
+message EventAnalyticsRequest {
+  EventData event = 1;
+  int64 as_of_epoch_seconds = 2;
+}
+
+message RegistrationBucket {
+  int64 period_start_epoch_seconds = 1;
+  int32 registrations = 2;
+}
+
+enum CapacityAlertLevel {
+  CAPACITY_ALERT_LEVEL_UNSPECIFIED = 0;
+  CAPACITY_ALERT_LEVEL_EIGHTY_PERCENT = 1;
+  CAPACITY_ALERT_LEVEL_NINETY_PERCENT = 2;
+  CAPACITY_ALERT_LEVEL_FULL = 3;
+}
+
+message CapacityAlert {
+  CapacityAlertLevel level = 1;
+  double threshold = 2;
+  string message = 3;
+}
+
+message EventAnalyticsResponse {
+  int64 event_id = 1;
+  int32 remaining_places = 2;
+  double occupancy_rate = 3;
+  bool full = 4;
+  double cancellation_rate = 5;
+  int32 attended_participants = 6;
+  double attendance_rate = 7;
+  repeated RegistrationBucket daily_registrations = 8;
+  repeated RegistrationBucket weekly_registrations = 9;
+  double registrations_per_day = 10;
+  // Zero means that no estimate can be made from the supplied history.
+  int64 estimated_full_at_epoch_seconds = 11;
+  repeated CapacityAlert alerts = 12;
+}
+
+message DashboardStatisticsRequest {
+  repeated EventData events = 1;
+  int64 as_of_epoch_seconds = 2;
+  // Zero returns every event in the popularity ranking.
+  int32 popular_events_limit = 3;
+}
+
+message EventComparison {
+  int64 event_id = 1;
+  string event_type = 2;
+  int32 current_participants = 3;
+  double occupancy_rate = 4;
+  double cancellation_rate = 5;
+  double attendance_rate = 6;
+  double registrations_per_day = 7;
+}
+
+message PopularEvent {
+  int64 event_id = 1;
+  string event_type = 2;
+  int32 current_participants = 3;
+  double occupancy_rate = 4;
+  int32 rank = 5;
+}
+
+message EventTypeStatistics {
+  string event_type = 1;
+  int32 event_count = 2;
+  double average_participants = 3;
+  double average_attendance_rate = 4;
+  // Average demand (active + cancelled registrations), plus a 10% buffer.
+  int32 recommended_capacity = 5;
+}
+
+message GlobalStatistics {
+  int32 total_events = 1;
+  int32 full_events = 2;
+  int64 total_capacity = 3;
+  int64 total_current_participants = 4;
+  int64 total_cancelled_participants = 5;
+  int64 total_attended_participants = 6;
+  double average_participants_per_event = 7;
+  double overall_occupancy_rate = 8;
+  double overall_cancellation_rate = 9;
+  double overall_attendance_rate = 10;
+}
+
+message DashboardStatisticsResponse {
+  repeated EventComparison comparisons = 1;
+  repeated PopularEvent popular_events = 2;
+  repeated EventTypeStatistics statistics_by_type = 3;
+  GlobalStatistics global = 4;
 }

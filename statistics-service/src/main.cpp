@@ -8,6 +8,7 @@
 #include "grpc/StatisticsGrpcService.hpp"
 #include "service/StatisticsService.hpp"
 
+/** Configures the gRPC server, binds port 9090, and blocks until shutdown. */
 int main() {
     constexpr auto serverAddress = "0.0.0.0:9090";
 

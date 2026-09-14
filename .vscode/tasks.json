@@ -1,0 +1,48 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "CMake: configure statistics service",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "-S",
+                "${workspaceFolder}/statistics-service",
+                "-B",
+                "${workspaceFolder}/statistics-service/build",
+                "-DCMAKE_BUILD_TYPE=Debug",
+                "-DBUILD_TESTING=ON"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake: build statistics service",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "${workspaceFolder}/statistics-service/build",
+                "--parallel"
+            ],
+            "dependsOn": "CMake: configure statistics service",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "CTest: statistics service",
+            "type": "shell",
+            "command": "ctest",
+            "args": [
+                "--test-dir",
+                "${workspaceFolder}/statistics-service/build",
+                "--output-on-failure"
+            ],
+            "dependsOn": "CMake: build statistics service",
+            "group": "test",
+            "problemMatcher": []
+        }
+    ]
+}

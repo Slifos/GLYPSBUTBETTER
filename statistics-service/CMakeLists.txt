@@ -1,5 +1,12 @@
 cmake_minimum_required(VERSION 3.20)
 
+# Use a developer's vcpkg installation automatically when VCPKG_ROOT is set.
+if(NOT DEFINED CMAKE_TOOLCHAIN_FILE AND DEFINED ENV{VCPKG_ROOT})
+    set(CMAKE_TOOLCHAIN_FILE
+        "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        CACHE FILEPATH "vcpkg toolchain file")
+endif()
+
 project(statistics_service VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -10,114 +17,55 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(Protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
-find_package(GTest CONFIG REQUIRED)
 
-set(PROTO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/proto")
-set(PROTO_FILE "${PROTO_DIR}/statistics.proto")
+set(PROTO_FILE "${CMAKE_CURRENT_SOURCE_DIR}/proto/statistics.proto")
 set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
-set(PROTO_SOURCE "${GENERATED_DIR}/statistics.pb.cc")
-set(PROTO_HEADER "${GENERATED_DIR}/statistics.pb.h")
-set(GRPC_SOURCE "${GENERATED_DIR}/statistics.grpc.pb.cc")
-set(GRPC_HEADER "${GENERATED_DIR}/statistics.grpc.pb.h")
+set(GENERATED_SOURCES
+    "${GENERATED_DIR}/statistics.pb.cc"
+    "${GENERATED_DIR}/statistics.grpc.pb.cc")
 
 add_custom_command(
-    OUTPUT
-        "${PROTO_SOURCE}"
-        "${PROTO_HEADER}"
-        "${GRPC_SOURCE}"
-        "${GRPC_HEADER}"
+    OUTPUT ${GENERATED_SOURCES}
+           "${GENERATED_DIR}/statistics.pb.h"
+           "${GENERATED_DIR}/statistics.grpc.pb.h"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${GENERATED_DIR}"
     COMMAND $<TARGET_FILE:protobuf::protoc>
-    ARGS
-        --proto_path=${PROTO_DIR}
-        --cpp_out=${GENERATED_DIR}
-        --grpc_out=${GENERATED_DIR}
-        --plugin=protoc-gen-grpc=$<TARGET_FILE:gRPC::grpc_cpp_plugin>
-        "${PROTO_FILE}"
-    DEPENDS
-        "${PROTO_FILE}"
-        protobuf::protoc
-        gRPC::grpc_cpp_plugin
+    ARGS --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/proto
+         --cpp_out=${GENERATED_DIR}
+         --grpc_out=${GENERATED_DIR}
+         --plugin=protoc-gen-grpc=$<TARGET_FILE:gRPC::grpc_cpp_plugin>
+         "${PROTO_FILE}"
+    DEPENDS "${PROTO_FILE}" protobuf::protoc gRPC::grpc_cpp_plugin
     COMMENT "Generating C++ protobuf and gRPC sources"
-    VERBATIM
-)
+    VERBATIM)
 
-add_library(statistics_proto STATIC
-    "${PROTO_SOURCE}"
-    "${GRPC_SOURCE}"
-)
+add_library(statistics_core STATIC
+    src/StatisticsService.cpp
+    src/StatisticsGrpcService.cpp
+    ${GENERATED_SOURCES})
 
-target_include_directories(statistics_proto
-    PUBLIC
-        "${GENERATED_DIR}"
-)
+target_include_directories(statistics_core PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/headers"
+    "${GENERATED_DIR}")
 
-target_link_libraries(statistics_proto
-    PUBLIC
-        gRPC::grpc++
-        protobuf::libprotobuf
-)
+target_link_libraries(statistics_core PUBLIC
+    gRPC::grpc++
+    protobuf::libprotobuf
+    spdlog::spdlog)
 
-add_library(statistics_business STATIC
-    src/service/StatisticsService.cpp
-)
-
-target_include_directories(statistics_business
-    PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/include"
-)
-
-add_library(statistics_grpc STATIC
-    src/grpc/StatisticsGrpcService.cpp
-)
-
-target_include_directories(statistics_grpc
-    PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/include"
-)
-
-target_link_libraries(statistics_grpc
-    PUBLIC
-        statistics_business
-        statistics_proto
-        spdlog::spdlog
-)
-
-add_executable(statistics_service
-    src/main.cpp
-)
-
-target_link_libraries(statistics_service
-    PRIVATE
-        statistics_grpc
-        spdlog::spdlog
-)
+add_executable(statistics_service src/main.cpp)
+target_link_libraries(statistics_service PRIVATE statistics_core)
 
 include(CTest)
-
 if(BUILD_TESTING)
-    add_executable(statistics_service_tests
-        tests/StatisticsServiceTest.cpp
-    )
-
-    target_link_libraries(statistics_service_tests
-        PRIVATE
-            statistics_business
-            GTest::gtest_main
-    )
-
+    find_package(GTest CONFIG REQUIRED)
     include(GoogleTest)
-    gtest_discover_tests(statistics_service_tests)
 
-    add_executable(statistics_grpc_tests
-        tests/StatisticsGrpcServiceTest.cpp
-    )
-
-    target_link_libraries(statistics_grpc_tests
-        PRIVATE
-            statistics_grpc
-            GTest::gtest_main
-    )
-
-    gtest_discover_tests(statistics_grpc_tests)
+    add_executable(statistics_tests
+        tests/StatisticsServiceTest.cpp
+        tests/StatisticsGrpcServiceTest.cpp)
+    target_link_libraries(statistics_tests PRIVATE
+        statistics_core
+        GTest::gtest_main)
+    gtest_discover_tests(statistics_tests)
 endif()

@@ -5,17 +5,16 @@
 #include <grpcpp/grpcpp.h>
 #include <spdlog/spdlog.h>
 
-#include "grpc/StatisticsGrpcService.hpp"
-#include "service/StatisticsService.hpp"
+#include "StatisticsGrpcService.hpp"
+#include "StatisticsService.hpp"
 
 /** Configures the gRPC server, binds port 9090, and blocks until shutdown. */
 int main() {
     constexpr auto serverAddress = "0.0.0.0:9090";
 
     try {
-        campusconnect::statistics::service::StatisticsService statisticsService;
-        campusconnect::statistics::transport::StatisticsGrpcService grpcService{
-            statisticsService};
+        StatisticsService statisticsService;
+        StatisticsGrpcService grpcService{statisticsService};
 
         grpc::ServerBuilder builder;
         builder.AddListeningPort(serverAddress, grpc::InsecureServerCredentials());

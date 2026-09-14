@@ -1,0 +1,38 @@
+[
+    {
+        "label": "CMake: configure statistics service",
+        "command": "cmake",
+        "args": [
+            "-S",
+            "$ZED_WORKTREE_ROOT/statistics-service",
+            "-B",
+            "$ZED_WORKTREE_ROOT/statistics-service/build",
+            "-DCMAKE_BUILD_TYPE=Debug",
+            "-DBUILD_TESTING=ON"
+        ],
+        "cwd": "$ZED_WORKTREE_ROOT",
+        "use_new_terminal": false
+    },
+    {
+        "label": "CMake: build statistics service",
+        "command": "cmake",
+        "args": [
+            "--build",
+            "$ZED_WORKTREE_ROOT/statistics-service/build",
+            "--parallel"
+        ],
+        "cwd": "$ZED_WORKTREE_ROOT",
+        "use_new_terminal": false
+    },
+    {
+        "label": "CTest: statistics service",
+        "command": "ctest",
+        "args": [
+            "--test-dir",
+            "$ZED_WORKTREE_ROOT/statistics-service/build",
+            "--output-on-failure"
+        ],
+        "cwd": "$ZED_WORKTREE_ROOT",
+        "use_new_terminal": false
+    }
+]

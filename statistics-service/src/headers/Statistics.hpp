@@ -5,8 +5,6 @@
 #include <string>
 #include <vector>
 
-namespace campusconnect::statistics::model {
-
 struct Statistics {
     int remainingPlaces;
     double occupancyRate;
@@ -103,5 +101,3 @@ struct DashboardStatistics {
     std::vector<EventTypeStatistics> statisticsByType;
     GlobalStatistics global;
 };
-
-}  // namespace campusconnect::statistics::model

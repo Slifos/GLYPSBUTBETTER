@@ -5,11 +5,9 @@
 
 #include <grpcpp/grpcpp.h>
 
-#include "grpc/StatisticsGrpcService.hpp"
-#include "service/StatisticsService.hpp"
+#include "StatisticsGrpcService.hpp"
+#include "StatisticsService.hpp"
 #include "statistics.pb.h"
-
-namespace {
 
 using campusconnect::statistics::EventStatisticsRequest;
 using campusconnect::statistics::EventStatisticsResponse;
@@ -17,8 +15,6 @@ using campusconnect::statistics::EventAnalyticsRequest;
 using campusconnect::statistics::EventAnalyticsResponse;
 using campusconnect::statistics::DashboardStatisticsRequest;
 using campusconnect::statistics::DashboardStatisticsResponse;
-using campusconnect::statistics::service::StatisticsService;
-using campusconnect::statistics::transport::StatisticsGrpcService;
 
 constexpr std::int64_t day = 86'400;
 
@@ -151,5 +147,3 @@ TEST(StatisticsGrpcServiceTest, RejectsNegativePopularityLimit) {
     EXPECT_EQ(status.error_code(), grpc::StatusCode::INVALID_ARGUMENT);
     EXPECT_EQ(status.error_message(), "popularEventsLimit cannot be negative");
 }
-
-}  // namespace

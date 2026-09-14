@@ -5,17 +5,9 @@
 #include <utility>
 #include <vector>
 
-#include "exception/InvalidStatisticsException.hpp"
-#include "model/Statistics.hpp"
-#include "service/StatisticsService.hpp"
-
-namespace {
-
-using campusconnect::statistics::exception::InvalidStatisticsException;
-using campusconnect::statistics::model::CapacityAlertLevel;
-using campusconnect::statistics::model::EventData;
-using campusconnect::statistics::model::RegistrationRecord;
-using campusconnect::statistics::service::StatisticsService;
+#include "InvalidStatisticsException.hpp"
+#include "Statistics.hpp"
+#include "StatisticsService.hpp"
 
 constexpr std::int64_t day = 86'400;
 
@@ -256,5 +248,3 @@ TEST(StatisticsServiceTest, RejectsDuplicateEventIdsInDashboard) {
         static_cast<void>(service.calculateDashboard(events, 10 * day)),
         InvalidStatisticsException);
 }
-
-}  // namespace

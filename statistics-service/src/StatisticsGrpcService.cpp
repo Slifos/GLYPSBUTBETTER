@@ -1,4 +1,4 @@
-#include "grpc/StatisticsGrpcService.hpp"
+#include "StatisticsGrpcService.hpp"
 
 #include <exception>
 #include <utility>
@@ -6,24 +6,20 @@
 
 #include <spdlog/spdlog.h>
 
-#include "exception/InvalidStatisticsException.hpp"
+#include "InvalidStatisticsException.hpp"
 
-namespace campusconnect::statistics::transport {
-
-namespace {
-
-// Converts generated protobuf input into a transport-independent business model.
-model::EventData toModel(const EventData& event) {
-    std::vector<model::RegistrationRecord> history;
+EventData StatisticsGrpcService::toModel(
+    const campusconnect::statistics::EventData& event) {
+    std::vector<RegistrationRecord> history;
     history.reserve(event.registration_history_size());
     for (const auto& record : event.registration_history()) {
-        history.push_back(model::RegistrationRecord{
+        history.push_back(RegistrationRecord{
             .timestampEpochSeconds = record.timestamp_epoch_seconds(),
             .registrations = record.registrations(),
         });
     }
 
-    return model::EventData{
+    return EventData{
         .eventId = event.event_id(),
         .eventType = event.event_type(),
         .maxParticipants = event.max_participants(),
@@ -34,46 +30,43 @@ model::EventData toModel(const EventData& event) {
     };
 }
 
-// Converts the domain alert enum to its wire-format equivalent.
-CapacityAlertLevel toProto(const model::CapacityAlertLevel level) {
+campusconnect::statistics::CapacityAlertLevel StatisticsGrpcService::toProto(
+    const CapacityAlertLevel level) {
     switch (level) {
-        case model::CapacityAlertLevel::eightyPercent:
-            return CAPACITY_ALERT_LEVEL_EIGHTY_PERCENT;
-        case model::CapacityAlertLevel::ninetyPercent:
-            return CAPACITY_ALERT_LEVEL_NINETY_PERCENT;
-        case model::CapacityAlertLevel::full:
-            return CAPACITY_ALERT_LEVEL_FULL;
+        case CapacityAlertLevel::eightyPercent:
+            return campusconnect::statistics::CAPACITY_ALERT_LEVEL_EIGHTY_PERCENT;
+        case CapacityAlertLevel::ninetyPercent:
+            return campusconnect::statistics::CAPACITY_ALERT_LEVEL_NINETY_PERCENT;
+        case CapacityAlertLevel::full:
+            return campusconnect::statistics::CAPACITY_ALERT_LEVEL_FULL;
     }
-    return CAPACITY_ALERT_LEVEL_UNSPECIFIED;
+    return campusconnect::statistics::CAPACITY_ALERT_LEVEL_UNSPECIFIED;
 }
 
-// Preserves validation details for clients using the standard gRPC status code.
-grpc::Status invalidArgument(const exception::InvalidStatisticsException& error) {
+grpc::Status StatisticsGrpcService::invalidArgument(
+    const InvalidStatisticsException& error) {
     return grpc::Status{grpc::StatusCode::INVALID_ARGUMENT, error.what()};
 }
 
-// Hides implementation details when an unexpected exception reaches the boundary.
-grpc::Status internalError() {
+grpc::Status StatisticsGrpcService::internalError() {
     return grpc::Status{
         grpc::StatusCode::INTERNAL,
         "An unexpected error occurred while calculating statistics"};
 }
 
-}  // namespace
-
 StatisticsGrpcService::StatisticsGrpcService(
-    service::StatisticsService& statisticsService) noexcept
+    StatisticsService& statisticsService) noexcept
     : statisticsService_{statisticsService} {}
 
 grpc::Status StatisticsGrpcService::GetEventStatistics(
     [[maybe_unused]] grpc::ServerContext* context,
-    const EventStatisticsRequest* request,
-    EventStatisticsResponse* response) {
+    const campusconnect::statistics::EventStatisticsRequest* request,
+    campusconnect::statistics::EventStatisticsResponse* response) {
     const auto eventId = request->event_id();
     spdlog::info("Statistics requested for event {}", eventId);
 
     try {
-        const model::Statistics statistics = statisticsService_.calculate(
+        const Statistics statistics = statisticsService_.calculate(
             request->max_participants(), request->current_participants());
 
         response->set_remaining_places(statistics.remainingPlaces);
@@ -86,7 +79,7 @@ grpc::Status StatisticsGrpcService::GetEventStatistics(
             statistics.occupancyRate,
             statistics.remainingPlaces);
         return grpc::Status::OK;
-    } catch (const exception::InvalidStatisticsException& exception) {
+    } catch (const InvalidStatisticsException& exception) {
         spdlog::warn(
             "Invalid statistics request for event {}: {}",
             eventId,
@@ -103,13 +96,13 @@ grpc::Status StatisticsGrpcService::GetEventStatistics(
 
 grpc::Status StatisticsGrpcService::AnalyzeEvent(
     [[maybe_unused]] grpc::ServerContext* context,
-    const EventAnalyticsRequest* request,
-    EventAnalyticsResponse* response) {
+    const campusconnect::statistics::EventAnalyticsRequest* request,
+    campusconnect::statistics::EventAnalyticsResponse* response) {
     const auto eventId = request->event().event_id();
     spdlog::info("Analytics requested for event {}", eventId);
 
     try {
-        const model::EventAnalytics analytics = statisticsService_.analyzeEvent(
+        const EventAnalytics analytics = statisticsService_.analyzeEvent(
             toModel(request->event()), request->as_of_epoch_seconds());
 
         response->set_event_id(analytics.eventId);
@@ -152,7 +145,7 @@ grpc::Status StatisticsGrpcService::AnalyzeEvent(
             analytics.cancellationRate,
             analytics.attendanceRate);
         return grpc::Status::OK;
-    } catch (const exception::InvalidStatisticsException& exception) {
+    } catch (const InvalidStatisticsException& exception) {
         spdlog::warn(
             "Invalid analytics request for event {}: {}",
             eventId,
@@ -169,24 +162,24 @@ grpc::Status StatisticsGrpcService::AnalyzeEvent(
 
 grpc::Status StatisticsGrpcService::GetDashboardStatistics(
     [[maybe_unused]] grpc::ServerContext* context,
-    const DashboardStatisticsRequest* request,
-    DashboardStatisticsResponse* response) {
+    const campusconnect::statistics::DashboardStatisticsRequest* request,
+    campusconnect::statistics::DashboardStatisticsResponse* response) {
     spdlog::info(
         "Dashboard statistics requested for {} events", request->events_size());
 
     try {
         if (request->popular_events_limit() < 0) {
-            throw exception::InvalidStatisticsException{
+            throw InvalidStatisticsException{
                 "popularEventsLimit cannot be negative"};
         }
 
-        std::vector<model::EventData> events;
+        std::vector<EventData> events;
         events.reserve(request->events_size());
         for (const auto& event : request->events()) {
             events.push_back(toModel(event));
         }
 
-        const model::DashboardStatistics dashboard =
+        const DashboardStatistics dashboard =
             statisticsService_.calculateDashboard(
                 events,
                 request->as_of_epoch_seconds(),
@@ -243,7 +236,7 @@ grpc::Status StatisticsGrpcService::GetDashboardStatistics(
         spdlog::info(
             "Dashboard statistics calculated for {} events", events.size());
         return grpc::Status::OK;
-    } catch (const exception::InvalidStatisticsException& exception) {
+    } catch (const InvalidStatisticsException& exception) {
         spdlog::warn("Invalid dashboard request: {}", exception.what());
         return invalidArgument(exception);
     } catch (const std::exception& exception) {
@@ -253,5 +246,3 @@ grpc::Status StatisticsGrpcService::GetDashboardStatistics(
         return internalError();
     }
 }
-
-}  // namespace campusconnect::statistics::transport

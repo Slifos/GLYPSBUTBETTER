@@ -1,4 +1,4 @@
-#include "service/StatisticsService.hpp"
+#include "StatisticsService.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -7,70 +7,62 @@
 #include <set>
 #include <utility>
 
-#include "exception/InvalidStatisticsException.hpp"
+#include "InvalidStatisticsException.hpp"
 
-namespace campusconnect::statistics::service {
-
-namespace {
-
-constexpr std::int64_t secondsPerDay = 86'400;
-
-// Enforces the invariants shared by detailed and dashboard analyses.
-void validateEvent(
-    const model::EventData& event,
+void StatisticsService::validateEvent(
+    const EventData& event,
     const std::int64_t asOfEpochSeconds) {
     if (asOfEpochSeconds <= 0) {
-        throw exception::InvalidStatisticsException{
+        throw InvalidStatisticsException{
             "asOfEpochSeconds must be greater than 0"};
     }
     if (event.eventId <= 0) {
-        throw exception::InvalidStatisticsException{
+        throw InvalidStatisticsException{
             "eventId must be greater than 0"};
     }
     if (event.eventType.empty()) {
-        throw exception::InvalidStatisticsException{
+        throw InvalidStatisticsException{
             "eventType cannot be empty"};
     }
     if (event.maxParticipants <= 0) {
-        throw exception::InvalidStatisticsException{
+        throw InvalidStatisticsException{
             "maxParticipants must be greater than 0"};
     }
     if (event.currentParticipants < 0) {
-        throw exception::InvalidStatisticsException{
+        throw InvalidStatisticsException{
             "currentParticipants cannot be negative"};
     }
     if (event.cancelledParticipants < 0) {
-        throw exception::InvalidStatisticsException{
+        throw InvalidStatisticsException{
             "cancelledParticipants cannot be negative"};
     }
     if (event.attendedParticipants < 0) {
-        throw exception::InvalidStatisticsException{
+        throw InvalidStatisticsException{
             "attendedParticipants cannot be negative"};
     }
     if (event.attendedParticipants > event.currentParticipants) {
-        throw exception::InvalidStatisticsException{
+        throw InvalidStatisticsException{
             "attendedParticipants cannot exceed currentParticipants"};
     }
 
     for (const auto& record : event.registrationHistory) {
         if (record.timestampEpochSeconds < 0) {
-            throw exception::InvalidStatisticsException{
+            throw InvalidStatisticsException{
                 "registration timestamp cannot be negative"};
         }
         if (record.timestampEpochSeconds > asOfEpochSeconds) {
-            throw exception::InvalidStatisticsException{
+            throw InvalidStatisticsException{
                 "registration timestamp cannot be after asOfEpochSeconds"};
         }
         if (record.registrations <= 0) {
-            throw exception::InvalidStatisticsException{
+            throw InvalidStatisticsException{
                 "registration count must be greater than 0"};
         }
     }
 }
 
-// Groups timestamped registrations into ordered UTC day or Monday-based week buckets.
-std::vector<model::RegistrationBucket> aggregateRegistrations(
-    const std::vector<model::RegistrationRecord>& history,
+std::vector<RegistrationBucket> StatisticsService::aggregateRegistrations(
+    const std::vector<RegistrationRecord>& history,
     const bool weekly) {
     std::map<std::int64_t, std::int64_t> registrationsByPeriod;
 
@@ -83,14 +75,14 @@ std::vector<model::RegistrationBucket> aggregateRegistrations(
             record.registrations;
     }
 
-    std::vector<model::RegistrationBucket> buckets;
+    std::vector<RegistrationBucket> buckets;
     buckets.reserve(registrationsByPeriod.size());
     for (const auto& [periodStart, registrations] : registrationsByPeriod) {
         if (registrations > std::numeric_limits<int>::max()) {
-            throw exception::InvalidStatisticsException{
+            throw InvalidStatisticsException{
                 "registration bucket exceeds the supported range"};
         }
-        buckets.push_back(model::RegistrationBucket{
+        buckets.push_back(RegistrationBucket{
             .periodStartEpochSeconds = periodStart,
             .registrations = static_cast<int>(registrations),
         });
@@ -98,8 +90,9 @@ std::vector<model::RegistrationBucket> aggregateRegistrations(
     return buckets;
 }
 
-// Calculates a percentage while defining an empty denominator as zero percent.
-double percentage(const std::int64_t numerator, const std::int64_t denominator) {
+double StatisticsService::percentage(
+    const std::int64_t numerator,
+    const std::int64_t denominator) {
     if (denominator == 0) {
         return 0.0;
     }
@@ -107,25 +100,16 @@ double percentage(const std::int64_t numerator, const std::int64_t denominator) 
            static_cast<double>(denominator) * 100.0;
 }
 
-struct EventTypeAccumulator {
-    int eventCount{};
-    std::int64_t currentParticipants{};
-    std::int64_t attendedParticipants{};
-    std::int64_t demand{};
-};
-
-}  // namespace
-
-model::Statistics StatisticsService::calculate(
+Statistics StatisticsService::calculate(
     const int maxParticipants,
     const int currentParticipants) const {
     if (maxParticipants <= 0) {
-        throw exception::InvalidStatisticsException{
+        throw InvalidStatisticsException{
             "maxParticipants must be greater than 0"};
     }
 
     if (currentParticipants < 0) {
-        throw exception::InvalidStatisticsException{
+        throw InvalidStatisticsException{
             "currentParticipants cannot be negative"};
     }
 
@@ -136,19 +120,19 @@ model::Statistics StatisticsService::calculate(
         static_cast<double>(currentParticipants) /
         static_cast<double>(maxParticipants) * 100.0;
 
-    return model::Statistics{
+    return Statistics{
         .remainingPlaces = remainingPlaces,
         .occupancyRate = occupancyRate,
         .full = currentParticipants >= maxParticipants,
     };
 }
 
-model::EventAnalytics StatisticsService::analyzeEvent(
-    const model::EventData& event,
+EventAnalytics StatisticsService::analyzeEvent(
+    const EventData& event,
     const std::int64_t asOfEpochSeconds) const {
     validateEvent(event, asOfEpochSeconds);
 
-    const model::Statistics capacity =
+    const Statistics capacity =
         calculate(event.maxParticipants, event.currentParticipants);
     const std::int64_t totalRegistrations =
         static_cast<std::int64_t>(event.currentParticipants) +
@@ -163,7 +147,7 @@ model::EventAnalytics StatisticsService::analyzeEvent(
     for (const auto& record : event.registrationHistory) {
         if (record.registrations >
             std::numeric_limits<std::int64_t>::max() - recordedRegistrations) {
-            throw exception::InvalidStatisticsException{
+            throw InvalidStatisticsException{
                 "registration history exceeds the supported range"};
         }
         recordedRegistrations += record.registrations;
@@ -198,30 +182,30 @@ model::EventAnalytics StatisticsService::analyzeEvent(
         }
     }
 
-    std::vector<model::CapacityAlert> alerts;
+    std::vector<CapacityAlert> alerts;
     if (capacity.occupancyRate >= 80.0) {
-        alerts.push_back(model::CapacityAlert{
-            .level = model::CapacityAlertLevel::eightyPercent,
+        alerts.push_back(CapacityAlert{
+            .level = CapacityAlertLevel::eightyPercent,
             .threshold = 80.0,
             .message = "Event capacity has reached 80%",
         });
     }
     if (capacity.occupancyRate >= 90.0) {
-        alerts.push_back(model::CapacityAlert{
-            .level = model::CapacityAlertLevel::ninetyPercent,
+        alerts.push_back(CapacityAlert{
+            .level = CapacityAlertLevel::ninetyPercent,
             .threshold = 90.0,
             .message = "Event capacity has reached 90%",
         });
     }
     if (capacity.full) {
-        alerts.push_back(model::CapacityAlert{
-            .level = model::CapacityAlertLevel::full,
+        alerts.push_back(CapacityAlert{
+            .level = CapacityAlertLevel::full,
             .threshold = 100.0,
             .message = "Event is full",
         });
     }
 
-    return model::EventAnalytics{
+    return EventAnalytics{
         .eventId = event.eventId,
         .capacity = capacity,
         .cancellationRate = cancellationRate,
@@ -237,18 +221,18 @@ model::EventAnalytics StatisticsService::analyzeEvent(
     };
 }
 
-model::DashboardStatistics StatisticsService::calculateDashboard(
-    const std::vector<model::EventData>& events,
+DashboardStatistics StatisticsService::calculateDashboard(
+    const std::vector<EventData>& events,
     const std::int64_t asOfEpochSeconds,
     const std::size_t popularEventsLimit) const {
     if (asOfEpochSeconds <= 0) {
-        throw exception::InvalidStatisticsException{
+        throw InvalidStatisticsException{
             "asOfEpochSeconds must be greater than 0"};
     }
 
     std::set<std::int64_t> eventIds;
-    std::vector<model::EventComparison> comparisons;
-    std::vector<model::PopularEvent> popularEvents;
+    std::vector<EventComparison> comparisons;
+    std::vector<PopularEvent> popularEvents;
     std::map<std::string, EventTypeAccumulator> accumulatorsByType;
     comparisons.reserve(events.size());
     popularEvents.reserve(events.size());
@@ -261,13 +245,13 @@ model::DashboardStatistics StatisticsService::calculateDashboard(
 
     for (const auto& event : events) {
         if (!eventIds.insert(event.eventId).second) {
-            throw exception::InvalidStatisticsException{
+            throw InvalidStatisticsException{
                 "eventId values must be unique"};
         }
 
-        const model::EventAnalytics analytics =
+        const EventAnalytics analytics =
             analyzeEvent(event, asOfEpochSeconds);
-        comparisons.push_back(model::EventComparison{
+        comparisons.push_back(EventComparison{
             .eventId = event.eventId,
             .eventType = event.eventType,
             .currentParticipants = event.currentParticipants,
@@ -276,7 +260,7 @@ model::DashboardStatistics StatisticsService::calculateDashboard(
             .attendanceRate = analytics.attendanceRate,
             .registrationsPerDay = analytics.registrationsPerDay,
         });
-        popularEvents.push_back(model::PopularEvent{
+        popularEvents.push_back(PopularEvent{
             .eventId = event.eventId,
             .eventType = event.eventType,
             .currentParticipants = event.currentParticipants,
@@ -303,7 +287,7 @@ model::DashboardStatistics StatisticsService::calculateDashboard(
     std::sort(
         popularEvents.begin(),
         popularEvents.end(),
-        [](const model::PopularEvent& left, const model::PopularEvent& right) {
+        [](const PopularEvent& left, const PopularEvent& right) {
             if (left.currentParticipants != right.currentParticipants) {
                 return left.currentParticipants > right.currentParticipants;
             }
@@ -320,7 +304,7 @@ model::DashboardStatistics StatisticsService::calculateDashboard(
         popularEvents[index].rank = static_cast<int>(index + 1);
     }
 
-    std::vector<model::EventTypeStatistics> statisticsByType;
+    std::vector<EventTypeStatistics> statisticsByType;
     statisticsByType.reserve(accumulatorsByType.size());
     for (const auto& [eventType, accumulator] : accumulatorsByType) {
         const double averageParticipants =
@@ -334,7 +318,7 @@ model::DashboardStatistics StatisticsService::calculateDashboard(
                                             ? std::numeric_limits<int>::max()
                                             : static_cast<int>(recommended);
 
-        statisticsByType.push_back(model::EventTypeStatistics{
+        statisticsByType.push_back(EventTypeStatistics{
             .eventType = eventType,
             .eventCount = accumulator.eventCount,
             .averageParticipants = averageParticipants,
@@ -347,11 +331,11 @@ model::DashboardStatistics StatisticsService::calculateDashboard(
 
     const std::int64_t totalRegistrations = totalCurrent + totalCancelled;
     const int totalEvents = static_cast<int>(events.size());
-    return model::DashboardStatistics{
+    return DashboardStatistics{
         .comparisons = std::move(comparisons),
         .popularEvents = std::move(popularEvents),
         .statisticsByType = std::move(statisticsByType),
-        .global = model::GlobalStatistics{
+        .global = GlobalStatistics{
             .totalEvents = totalEvents,
             .fullEvents = fullEvents,
             .totalCapacity = totalCapacity,
@@ -369,5 +353,3 @@ model::DashboardStatistics StatisticsService::calculateDashboard(
         },
     };
 }
-
-}  // namespace campusconnect::statistics::service

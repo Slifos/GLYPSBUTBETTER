@@ -1,0 +1,11 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/statistics-service",
+    "cmake.buildDirectory": "${workspaceFolder}/statistics-service/build",
+    "cmake.configureOnOpen": true,
+    "cmake.configureSettings": {
+        "BUILD_TESTING": true,
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true
+    },
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "C_Cpp.default.compileCommands": "${workspaceFolder}/statistics-service/build/compile_commands.json"
+}

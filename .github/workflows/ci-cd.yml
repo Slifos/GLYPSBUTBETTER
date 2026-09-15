@@ -13,11 +13,6 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  VCPKG_VERSION: "2026.07.29"
-  VCPKG_ROOT: ${{ github.workspace }}/.vcpkg
-  VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-cache
-
 jobs:
   test:
     name: Build and test
@@ -33,35 +28,19 @@ jobs:
           sudo apt-get install --yes --no-install-recommends \
             build-essential \
             cmake \
-            curl \
-            git \
+            libgrpc++-dev \
+            libgtest-dev \
+            libprotobuf-dev \
+            libspdlog-dev \
             ninja-build \
             pkg-config \
-            tar \
-            unzip \
-            zip
-
-      - name: Restore vcpkg binary cache
-        uses: actions/cache@v6
-        with:
-          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
-          key: vcpkg-${{ runner.os }}-${{ env.VCPKG_VERSION }}-${{ hashFiles('statistics-service/vcpkg.json') }}
-          restore-keys: |
-            vcpkg-${{ runner.os }}-${{ env.VCPKG_VERSION }}-
-
-      - name: Install vcpkg
-        run: |
-          mkdir -p "$VCPKG_DEFAULT_BINARY_CACHE"
-          git clone --depth 1 --branch "$VCPKG_VERSION" \
-            https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
-          "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+            protobuf-compiler \
+            protobuf-compiler-grpc
 
       - name: Configure
         run: |
           cmake -S statistics-service -B statistics-service/build-ci -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
-            -DVCPKG_TARGET_TRIPLET=x64-linux \
             -DBUILD_TESTING=ON
 
       - name: Build

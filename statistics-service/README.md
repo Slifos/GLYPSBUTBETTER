@@ -124,7 +124,10 @@ tests starts a network server.
 ## CI/CD
 
 The GitHub Actions workflow in `.github/workflows/ci-cd.yml` builds and tests the
-service on every push and on pull requests targeting `main`.
+service on every push and on pull requests targeting `main`. The CI runner uses
+Ubuntu's precompiled gRPC, Protobuf, spdlog, and GoogleTest packages, so it only
+compiles the service itself rather than building its third-party dependencies
+through vcpkg.
 
 After the tests pass, pushes to `main` publish a production container image to
 GitHub Container Registry with `latest` and commit SHA tags. Tags beginning with

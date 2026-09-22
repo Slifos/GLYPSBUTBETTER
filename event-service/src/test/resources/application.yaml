@@ -1,0 +1,16 @@
+# Overrides main application.yaml for tests: in-memory H2 instead of PostgreSQL,
+# so the build runs without Docker or a live database.
+spring:
+  datasource:
+    url: jdbc:h2:mem:event-service;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  grpc:
+    client:
+      channel:
+        statistics:
+          target: static://localhost:9090

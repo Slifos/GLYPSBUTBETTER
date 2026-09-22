@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: campusconnect-postgres
+    environment:
+      POSTGRES_DB: campusconnect
+      POSTGRES_USER: campusconnect
+      POSTGRES_PASSWORD: campusconnect
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campusconnect"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  statistics-service:
+    build: ./statistics-service
+    container_name: campusconnect-statistics-service
+    ports:
+      - "9090:9090"
+
+  event-service:
+    build: ./event-service
+    container_name: campusconnect-event-service
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: campusconnect
+      DB_USER: campusconnect
+      DB_PASSWORD: campusconnect
+      STATISTICS_SERVICE_HOST: statistics-service
+      STATISTICS_SERVICE_PORT: 9090
+      SERVER_PORT: 8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      statistics-service:
+        condition: service_started
+
+volumes:
+  postgres-data:

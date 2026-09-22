@@ -14,8 +14,30 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Protobuf CONFIG REQUIRED)
-find_package(gRPC CONFIG REQUIRED)
+# vcpkg (developer builds) installs CMake config packages for Protobuf and
+# gRPC. Ubuntu's apt packages (used by CI and the Docker build) only ship
+# pkg-config files for these two, not CMake config packages, so fall back to
+# pkg-config when the CONFIG packages cannot be found.
+find_package(Protobuf CONFIG QUIET)
+find_package(gRPC CONFIG QUIET)
+
+if(Protobuf_FOUND AND gRPC_FOUND)
+    set(PROTOC_EXECUTABLE "$<TARGET_FILE:protobuf::protoc>")
+    set(GRPC_CPP_PLUGIN_EXECUTABLE "$<TARGET_FILE:gRPC::grpc_cpp_plugin>")
+    set(PROTOBUF_LINK_TARGET protobuf::libprotobuf)
+    set(GRPC_LINK_TARGET gRPC::grpc++)
+else()
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(PROTOBUF REQUIRED IMPORTED_TARGET protobuf)
+    pkg_check_modules(GRPCPP REQUIRED IMPORTED_TARGET grpc++)
+
+    find_program(PROTOC_EXECUTABLE protoc REQUIRED)
+    find_program(GRPC_CPP_PLUGIN_EXECUTABLE grpc_cpp_plugin REQUIRED)
+
+    set(PROTOBUF_LINK_TARGET PkgConfig::PROTOBUF)
+    set(GRPC_LINK_TARGET PkgConfig::GRPCPP)
+endif()
+
 find_package(spdlog CONFIG REQUIRED)
 
 set(PROTO_FILE "${CMAKE_CURRENT_SOURCE_DIR}/proto/statistics.proto")
@@ -29,13 +51,13 @@ add_custom_command(
            "${GENERATED_DIR}/statistics.pb.h"
            "${GENERATED_DIR}/statistics.grpc.pb.h"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${GENERATED_DIR}"
-    COMMAND $<TARGET_FILE:protobuf::protoc>
+    COMMAND "${PROTOC_EXECUTABLE}"
     ARGS --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/proto
          --cpp_out=${GENERATED_DIR}
          --grpc_out=${GENERATED_DIR}
-         --plugin=protoc-gen-grpc=$<TARGET_FILE:gRPC::grpc_cpp_plugin>
+         --plugin=protoc-gen-grpc=${GRPC_CPP_PLUGIN_EXECUTABLE}
          "${PROTO_FILE}"
-    DEPENDS "${PROTO_FILE}" protobuf::protoc gRPC::grpc_cpp_plugin
+    DEPENDS "${PROTO_FILE}"
     COMMENT "Generating C++ protobuf and gRPC sources"
     VERBATIM)
 
@@ -49,8 +71,8 @@ target_include_directories(statistics_core PUBLIC
     "${GENERATED_DIR}")
 
 target_link_libraries(statistics_core PUBLIC
-    gRPC::grpc++
-    protobuf::libprotobuf
+    ${GRPC_LINK_TARGET}
+    ${PROTOBUF_LINK_TARGET}
     spdlog::spdlog)
 
 add_executable(statistics_service src/main.cpp)

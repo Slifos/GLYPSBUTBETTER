@@ -18,6 +18,9 @@ spring:
         statistics:
           target: static://${STATISTICS_SERVICE_HOST:localhost}:${STATISTICS_SERVICE_PORT:9090}
 
+user-service:
+  base-url: http://${USER_SERVICE_HOST:localhost}:${USER_SERVICE_PORT:8000}
+
 server:
   port: ${SERVER_PORT:8081}
 

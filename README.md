@@ -41,6 +41,8 @@ Java 21, Spring Boot, Spring Data JPA (event-service), Python + FastAPI + SQLAlc
 | PUT / DELETE | `/events/{id}` | Modification / suppression |
 | POST | `/events/{id}/registrations` | Rejoindre |
 | DELETE | `/events/{id}/registrations/{userId}` | Quitter |
+| GET | `/events/{id}/statistics` | Statistiques détaillées de l'événement (via statistics-service) |
+| GET | `/events/statistics/dashboard` | Statistiques cross-événements (via statistics-service) |
 
 Erreurs : `EVENT_NOT_FOUND` (404), `USER_NOT_FOUND` (404), `EVENT_FULL` (400), `ALREADY_REGISTERED` (400), `INVALID_EVENT_DATE` (400).
 

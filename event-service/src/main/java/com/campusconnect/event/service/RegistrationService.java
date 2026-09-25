@@ -1,5 +1,6 @@
 package com.campusconnect.event.service;
 
+import com.campusconnect.event.client.UserClient;
 import com.campusconnect.event.entity.Event;
 import com.campusconnect.event.entity.Registration;
 import com.campusconnect.event.entity.RegistrationStatus;
@@ -27,10 +28,12 @@ public class RegistrationService {
 
     private final RegistrationRepository registrationRepository;
     private final EventService eventService;
+    private final UserClient userClient;
 
     @Transactional
     public RegistrationResponse register(Long eventId, Long userId) {
         Event event = eventService.findEventOrThrow(eventId);
+        userClient.verifyExists(userId);
 
         registrationRepository.findByEventIdAndUserIdAndStatus(eventId, userId, RegistrationStatus.ACTIVE)
                 .ifPresent(existing -> {

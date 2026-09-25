@@ -6,7 +6,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
-# ponytail: sqlite fallback for local runs/tests, compose sets postgres
+# sqlite fallback for local runs/tests, compose sets postgres
 engine = create_engine(os.getenv("DATABASE_URL", "sqlite:///users.db"))
 
 
@@ -31,7 +31,7 @@ class UserOut(UserIn):
     model_config = {"from_attributes": True}
 
 
-# ponytail: create_all instead of migrations, add alembic if the schema starts changing
+# create_all instead of migrations, add alembic if the schema starts changing
 Base.metadata.create_all(engine)
 app = FastAPI()
 

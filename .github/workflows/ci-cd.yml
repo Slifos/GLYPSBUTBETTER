@@ -14,8 +14,8 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Build and test
+  test-statistics-service:
+    name: Build and test (statistics-service)
     runs-on: ubuntu-24.04
 
     steps:
@@ -49,9 +49,49 @@ jobs:
       - name: Test
         run: ctest --test-dir statistics-service/build-ci --output-on-failure
 
+  test-event-service:
+    name: Build and test (event-service)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Test
+        working-directory: event-service
+        run: ./mvnw -B test
+
+  test-user-service:
+    name: Build and test (user-service)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        working-directory: user-service
+        run: pip install -r requirements.txt pytest httpx
+
+      - name: Test
+        working-directory: user-service
+        run: pytest -q
+
   publish-image:
-    name: Publish container image
-    needs: test
+    name: Publish container image (${{ matrix.service }})
+    needs: [test-statistics-service, test-event-service, test-user-service]
     if: >-
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
@@ -59,6 +99,9 @@ jobs:
     permissions:
       contents: read
       packages: write
+    strategy:
+      matrix:
+        service: [statistics-service, event-service, user-service]
 
     steps:
       - name: Check out repository
@@ -78,7 +121,7 @@ jobs:
         id: metadata
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository }}-statistics-service
+          images: ghcr.io/${{ github.repository }}-${{ matrix.service }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix=sha-
@@ -89,9 +132,9 @@ jobs:
       - name: Build and publish image
         uses: docker/build-push-action@v7
         with:
-          context: ./statistics-service
+          context: ./${{ matrix.service }}
           push: true
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}

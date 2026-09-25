@@ -17,6 +17,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 /**
  * One user's registration to one {@link Event}. Cancelling or marking
@@ -59,18 +60,19 @@ public class Registration {
 
     @PrePersist
     void onCreate() {
-        LocalDateTime now = LocalDateTime.now();
+        // Stored (and later read by StatisticsGrpcClient) as UTC, not the host's default zone.
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         this.createdAt = now;
         this.updatedAt = now;
     }
 
     public void markAttended() {
         this.status = RegistrationStatus.ATTENDED;
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(ZoneOffset.UTC);
     }
 
     public void cancel() {
         this.status = RegistrationStatus.CANCELLED;
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(ZoneOffset.UTC);
     }
 }

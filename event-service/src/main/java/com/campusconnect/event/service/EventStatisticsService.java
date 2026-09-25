@@ -59,8 +59,9 @@ public class EventStatisticsService {
         }
 
         List<Event> events = eventRepository.findAll();
-        Map<Long, List<Registration>> registrationsByEvent = events.stream()
-                .collect(Collectors.toMap(Event::getId, e -> registrationRepository.findByEventId(e.getId())));
+        List<Long> eventIds = events.stream().map(Event::getId).toList();
+        Map<Long, List<Registration>> registrationsByEvent = registrationRepository.findByEventIdIn(eventIds).stream()
+                .collect(Collectors.groupingBy(r -> r.getEvent().getId()));
         DashboardStatisticsDto dto = statisticsGrpcClient.dashboard(events, registrationsByEvent, now, popularEventsLimit);
         dashboardCache.set(new CachedDashboard(popularEventsLimit, now.plus(DASHBOARD_CACHE_TTL), dto));
         return dto;

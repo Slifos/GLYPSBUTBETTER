@@ -54,7 +54,7 @@ public class EventService {
 
     @Transactional
     public EventResponse updateEvent(Long eventId, EventUpdateRequest request) {
-        Event event = findEventOrThrow(eventId);
+        Event event = findEventForUpdateOrThrow(eventId);
         long currentParticipants = countCurrentParticipants(eventId);
         if (request.maxParticipants() < currentParticipants) {
             throw new InvalidEventCapacityException(request.maxParticipants(), currentParticipants);
@@ -82,7 +82,7 @@ public class EventService {
                 .orElseThrow(() -> new EventNotFoundException(eventId));
     }
 
-    /** Locks the event row for the rest of the transaction; use only where the caller writes registrations. */
+    /** Locks the event row for the rest of the transaction; use where the caller checks-then-writes capacity/registrations. */
     @Transactional
     Event findEventForUpdateOrThrow(Long eventId) {
         return eventRepository.findByIdForUpdate(eventId)

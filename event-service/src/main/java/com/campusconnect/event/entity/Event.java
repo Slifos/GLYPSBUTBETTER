@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 /**
  * An event that people can register for. Registrations, cancellations and
@@ -61,6 +62,7 @@ public class Event {
 
     @PrePersist
     void onCreate() {
-        this.createdAt = LocalDateTime.now();
+        // Stored (and later read by StatisticsGrpcClient) as UTC, not the host's default zone.
+        this.createdAt = LocalDateTime.now(ZoneOffset.UTC);
     }
 }

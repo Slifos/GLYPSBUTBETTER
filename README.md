@@ -1,6 +1,6 @@
 # GLYPSBUTBETTER
 
-Application où des étudiants créent des activités/événements (tournoi Smash, foot, révision SQL, afterwork…) et rejoignent celles des autres. Projet de cours axé sur l'architecture microservices et la CI/CD.
+Application où des étudiants créent des activités/événements (tournoi Smash, foot, révision SQL, afterwork…) et rejoignent celles des autres.
 
 ## Fonctionnalités
 

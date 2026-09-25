@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: campusconnect-postgres
+    environment:
+      POSTGRES_DB: campusconnect
+      POSTGRES_USER: campusconnect
+      POSTGRES_PASSWORD: campusconnect
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campusconnect"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  statistics-service:
+    image: ghcr.io/slifos/glypsbutbetter-statistics-service:latest
+    container_name: campusconnect-statistics-service
+    ports:
+      - "9090:9090"
+
+  event-service:
+    image: ghcr.io/slifos/glypsbutbetter-event-service:latest
+    container_name: campusconnect-event-service
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: campusconnect
+      DB_USER: campusconnect
+      DB_PASSWORD: campusconnect
+      STATISTICS_SERVICE_HOST: statistics-service
+      STATISTICS_SERVICE_PORT: 9090
+      USER_SERVICE_HOST: user-service
+      USER_SERVICE_PORT: 8000
+      SERVER_PORT: 8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      statistics-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+
+  user-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: users
+      POSTGRES_USER: users
+      POSTGRES_PASSWORD: users
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U users"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  user-service:
+    image: ghcr.io/slifos/glypsbutbetter-user-service:latest
+    environment:
+      DATABASE_URL: postgresql+psycopg://users:users@user-db/users
+    ports:
+      - "8001:8000"
+    depends_on:
+      user-db:
+        condition: service_healthy
+
+volumes:
+  postgres-data:

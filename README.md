@@ -69,3 +69,9 @@ Erreurs : `EVENT_NOT_FOUND` (404), `USER_NOT_FOUND` (404), `EVENT_FULL` (400), `
 ```
 docker compose up
 ```
+
+Pour lancer sans rien build (images déjà publiées sur GHCR par la CI) :
+
+```
+docker compose -f docker-compose.images.yml up
+```

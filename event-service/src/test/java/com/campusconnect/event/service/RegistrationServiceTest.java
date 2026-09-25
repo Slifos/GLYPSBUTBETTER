@@ -55,6 +55,7 @@ class RegistrationServiceTest {
     @Test
     void register_savesActiveRegistration_whenCapacityAvailable() {
         when(eventService.findEventOrThrow(EVENT_ID)).thenReturn(event);
+        when(eventService.findEventForUpdateOrThrow(EVENT_ID)).thenReturn(event);
         when(registrationRepository.findByEventIdAndUserIdAndStatus(EVENT_ID, USER_ID, RegistrationStatus.ACTIVE))
                 .thenReturn(Optional.empty());
         when(eventService.countCurrentParticipants(EVENT_ID)).thenReturn(1L);
@@ -74,6 +75,7 @@ class RegistrationServiceTest {
     @Test
     void register_throwsEventFull_whenCapacityReached() {
         when(eventService.findEventOrThrow(EVENT_ID)).thenReturn(event);
+        when(eventService.findEventForUpdateOrThrow(EVENT_ID)).thenReturn(event);
         when(registrationRepository.findByEventIdAndUserIdAndStatus(EVENT_ID, USER_ID, RegistrationStatus.ACTIVE))
                 .thenReturn(Optional.empty());
         when(eventService.countCurrentParticipants(EVENT_ID)).thenReturn(2L);

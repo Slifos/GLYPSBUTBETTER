@@ -32,8 +32,12 @@ public class RegistrationService {
 
     @Transactional
     public RegistrationResponse register(Long eventId, Long userId) {
-        Event event = eventService.findEventOrThrow(eventId);
+        eventService.findEventOrThrow(eventId);
         userClient.verifyExists(userId);
+
+        // Locked only from here: the checks above don't touch the row, so the
+        // lock isn't held across the user-service HTTP call.
+        Event event = eventService.findEventForUpdateOrThrow(eventId);
 
         registrationRepository.findByEventIdAndUserIdAndStatus(eventId, userId, RegistrationStatus.ACTIVE)
                 .ifPresent(existing -> {

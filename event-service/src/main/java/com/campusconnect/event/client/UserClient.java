@@ -9,7 +9,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-/** Only place in the codebase that talks to user-service. */
+/** Only place in the codebase that talks to user-service. Timeouts come from spring.http.clients.*. */
 @Slf4j
 @Component
 public class UserClient {

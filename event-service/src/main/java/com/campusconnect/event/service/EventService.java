@@ -82,6 +82,13 @@ public class EventService {
                 .orElseThrow(() -> new EventNotFoundException(eventId));
     }
 
+    /** Locks the event row for the rest of the transaction; use only where the caller writes registrations. */
+    @Transactional
+    Event findEventForUpdateOrThrow(Long eventId) {
+        return eventRepository.findByIdForUpdate(eventId)
+                .orElseThrow(() -> new EventNotFoundException(eventId));
+    }
+
     long countCurrentParticipants(Long eventId) {
         return registrationRepository.countByEventIdAndStatus(eventId, RegistrationStatus.ACTIVE)
                 + registrationRepository.countByEventIdAndStatus(eventId, RegistrationStatus.ATTENDED);

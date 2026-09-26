@@ -3,12 +3,12 @@ import type { RegistrationResponse } from "../types/registration";
 
 export const registrationService = {
     async registerForEvent(eventId: number, userId: number): Promise<RegistrationResponse> {
-        const response = await api.post<RegistrationResponse>(`/events/${eventId}/register`, { userId });
+        const response = await api.post<RegistrationResponse>(`/events/${eventId}/registrations`, { userId });
         return response.data;
     },
     
-    async getRegistrations(eventd: number): Promise<RegistrationResponse[]> {
-        const response = await api.get<RegistrationResponse[]>(`/events/${eventd}/registrations`);
+    async getRegistrations(eventId: number): Promise<RegistrationResponse[]> {
+        const response = await api.get<RegistrationResponse[]>(`/events/${eventId}/registrations`);
         return response.data;
     },
 

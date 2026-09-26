@@ -16,13 +16,18 @@ export default defineConfig({
     },
   },
 
-  server:{
-    proxy:{
-      '/api': {
+  server: {
+    proxy: {
+      '/api/events':{
         target: 'http://localhost:8081',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
-      }
-    }
-  }
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      '/api/users': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
+  },
 })

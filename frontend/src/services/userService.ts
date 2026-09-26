@@ -1,15 +1,5 @@
 import api from "./api";
-
-export interface UserCreateRequest{
-    name: string
-    email: string
-}
-
-export interface UserResponse {
-    id: number
-    name: string
-    email: string
-}
+import type { UserCreateRequest, UserResponse } from "../types/user";
 
 export const userService = {
     async getUsers(): Promise<UserResponse[]> {

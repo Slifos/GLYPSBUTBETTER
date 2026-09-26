@@ -1,13 +1,5 @@
 import api from "./api";
-
-export interface RegistrationResponse {
-  id: number
-  eventId: number
-  userId: number
-  status: string
-  createdAt: string
-  updatedAt: string
-}
+import type { RegistrationResponse } from "../types/registration";
 
 export const registrationService = {
     async registerForEvent(eventId: number, userId: number): Promise<RegistrationResponse> {

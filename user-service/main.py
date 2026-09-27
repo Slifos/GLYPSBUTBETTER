@@ -31,7 +31,7 @@ class UserOut(UserIn):
     model_config = {"from_attributes": True}
 
 
-# create_all instead of migrations, add alembic if the schema starts changing
+# Create the initial schema for this small service.
 Base.metadata.create_all(engine)
 app = FastAPI()
 
@@ -63,3 +63,27 @@ def get_user(user_id: int, s: Session = Depends(db)):
     if not user:
         raise HTTPException(404, "USER_NOT_FOUND")
     return user
+
+
+@app.put("/users/{user_id}", response_model=UserOut)
+def update_user(user_id: int, body: UserIn, s: Session = Depends(db)):
+    user = s.get(User, user_id)
+    if not user:
+        raise HTTPException(404, "USER_NOT_FOUND")
+    user.name = body.name
+    user.email = body.email
+    try:
+        s.commit()
+    except IntegrityError:
+        s.rollback()
+        raise HTTPException(400, "EMAIL_ALREADY_USED")
+    return user
+
+
+@app.delete("/users/{user_id}", status_code=204)
+def delete_user(user_id: int, s: Session = Depends(db)):
+    user = s.get(User, user_id)
+    if not user:
+        raise HTTPException(404, "USER_NOT_FOUND")
+    s.delete(user)
+    s.commit()

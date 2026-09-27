@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import {registrationService} from '../services/registrationService'
 import { useUserStore } from '../stores/userStore'
 import {type EventResponse} from '../types/event'
+import { notificationService, type Notification } from '../services/notificationService'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -15,6 +16,8 @@ const error = ref<string | null>(null)
 
 const registeringEventId = ref<number | null>(null)
 const registeredEventIds = ref<number[]>([])
+const notifications = ref<Notification[]>([])
+const notificationError = ref<string | null>(null)
 
 onMounted(async () => {
     await loadEvents()
@@ -29,6 +32,7 @@ const loadEvents = async () => {
 
         if(userStore.user){
             await loadUserRegistrations()
+            await loadNotifications()
         }
     } catch (err) {
         console.error('Erreur lors de la récupération des événements:', err)
@@ -47,7 +51,9 @@ const loadUserRegistrations = async () =>{
         try{
             const eventRegistrations = await registrationService.getRegistrations(event.id)
 
-            const isRegistered = eventRegistrations.some((registration) => registration.userId === userStore.user?.id)
+            const isRegistered = eventRegistrations.some((registration) =>
+                registration.userId === userStore.user?.id && registration.status !== 'CANCELLED'
+            )
             
             if(isRegistered){
                 registrations.push(event.id)
@@ -59,6 +65,17 @@ const loadUserRegistrations = async () =>{
     }
 
     registeredEventIds.value = registrations
+}
+
+const loadNotifications = async () => {
+    if (!userStore.user) return
+    try {
+        notifications.value = await notificationService.forUser(userStore.user.id)
+        notificationError.value = null
+    } catch (err) {
+        console.error('Erreur lors de la récupération des notifications:', err)
+        notificationError.value = 'Impossible de charger les notifications.'
+    }
 }
 
 const isRegistered = (eventId: number): boolean => {
@@ -125,6 +142,18 @@ const leaveEvent = async (event: EventResponse) =>{
         <button @click="router.push('/login')">Se connecter</button>
     </div>
 
+    <section v-if="userStore.user" class="notifications">
+        <h2>Notifications</h2>
+        <button @click="loadNotifications">Actualiser</button>
+        <p v-if="notificationError">{{ notificationError }}</p>
+        <p v-else-if="notifications.length === 0">Aucune notification.</p>
+        <ul v-else>
+            <li v-for="notification in notifications" :key="notification.id">
+                {{ notification.message }}
+            </li>
+        </ul>
+    </section>
+
     <h2>Liste des événements</h2>
 
     <p v-if="loading">Chargement des événements...</p>
@@ -153,6 +182,22 @@ const leaveEvent = async (event: EventResponse) =>{
 </template>
 
 <style scoped>
+.notifications {
+  max-width: 1100px;
+  margin: 1rem auto;
+  padding: 1rem;
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+}
+
+.notifications h2 {
+  text-align: left;
+  margin: 0 0 0.5rem;
+}
+
+.notifications li {
+  margin: 0.4rem 0;
+}
 h1 {
   text-align: center;
   font-size: 2.2rem;

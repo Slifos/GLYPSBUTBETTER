@@ -17,3 +17,6 @@ spring:
 
 user-service:
   base-url: http://localhost:8000
+
+notification:
+  enabled: false

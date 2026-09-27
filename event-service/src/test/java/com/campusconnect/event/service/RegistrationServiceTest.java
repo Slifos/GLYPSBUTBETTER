@@ -4,6 +4,7 @@ import com.campusconnect.event.client.UserClient;
 import com.campusconnect.event.entity.Event;
 import com.campusconnect.event.entity.Registration;
 import com.campusconnect.event.entity.RegistrationStatus;
+import com.campusconnect.event.notification.NotificationMessage;
 import com.campusconnect.event.exception.DuplicateRegistrationException;
 import com.campusconnect.event.exception.EventFullException;
 import com.campusconnect.event.exception.RegistrationNotFoundException;
@@ -15,7 +16,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,6 +44,8 @@ class RegistrationServiceTest {
     private EventService eventService;
     @Mock
     private UserClient userClient;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private RegistrationService registrationService;
@@ -58,7 +64,7 @@ class RegistrationServiceTest {
         when(eventService.findEventForUpdateOrThrow(EVENT_ID)).thenReturn(event);
         when(registrationRepository.findByEventIdAndUserIdAndStatus(EVENT_ID, USER_ID, RegistrationStatus.ACTIVE))
                 .thenReturn(Optional.empty());
-        when(eventService.countCurrentParticipants(EVENT_ID)).thenReturn(1L);
+        when(eventService.countCurrentParticipants(EVENT_ID)).thenReturn(0L);
         when(registrationRepository.save(any(Registration.class))).thenAnswer(invocation -> {
             Registration registration = invocation.getArgument(0);
             registration.setId(99L);
@@ -70,6 +76,31 @@ class RegistrationServiceTest {
         assertThat(response.status()).isEqualTo(RegistrationStatus.ACTIVE);
         assertThat(response.userId()).isEqualTo(USER_ID);
         verify(userClient).verifyExists(USER_ID);
+        verify(eventPublisher).publishEvent(any(NotificationMessage.class));
+    }
+
+    @Test
+    void register_notifiesEveryParticipant_whenEventBecomesFull() {
+        when(eventService.findEventOrThrow(EVENT_ID)).thenReturn(event);
+        when(eventService.findEventForUpdateOrThrow(EVENT_ID)).thenReturn(event);
+        when(eventService.countCurrentParticipants(EVENT_ID)).thenReturn(1L);
+        Registration existing = new Registration(event, 7L);
+        when(registrationRepository.save(any(Registration.class))).thenAnswer(invocation -> {
+            Registration registration = invocation.getArgument(0);
+            registration.setId(99L);
+            return registration;
+        });
+        when(registrationRepository.findByEventId(EVENT_ID))
+                .thenReturn(List.of(existing, new Registration(event, USER_ID)));
+
+        registrationService.register(EVENT_ID, USER_ID);
+
+        ArgumentCaptor<NotificationMessage> messages = ArgumentCaptor.forClass(NotificationMessage.class);
+        verify(eventPublisher, times(3)).publishEvent(messages.capture());
+        assertThat(messages.getAllValues()).extracting(NotificationMessage::kind)
+                .containsExactly("REGISTRATION_CONFIRMED", "EVENT_FULL", "EVENT_FULL");
+        assertThat(messages.getAllValues()).extracting(NotificationMessage::userId)
+                .containsExactly(USER_ID, 7L, USER_ID);
     }
 
     @Test

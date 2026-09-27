@@ -18,3 +18,8 @@ def test_flow():
     assert len(c.get("/users").json()) == 1
     assert c.post("/users", json={"name": "B", "email": "ana@efrei.net"}).json()["detail"] == "EMAIL_ALREADY_USED"
     assert c.get("/users/999").json()["detail"] == "USER_NOT_FOUND"
+    updated = c.put(f"/users/{uid}", json={"name": "Ana Updated", "email": "ana2@efrei.net"})
+    assert updated.status_code == 200
+    assert updated.json()["name"] == "Ana Updated"
+    assert c.delete(f"/users/{uid}").status_code == 204
+    assert c.get(f"/users/{uid}").status_code == 404

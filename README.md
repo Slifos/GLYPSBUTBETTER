@@ -65,7 +65,11 @@ Erreurs : événement ou utilisateur absent (404), événement complet ou inscri
 
 ## CI/CD
 
-`.github/workflows/ci-cd.yml` (GitHub Actions) build et teste les services backend et le frontend à chaque push, et publie les cinq images Docker sur GHCR (`ghcr.io/<repo>-<service>`) à chaque push sur `main` ou sur un tag `v*`.
+`.github/workflows/ci-cd.yml` (GitHub Actions) exécute les tests de chaque backend, le build typé du frontend, puis démarre la stack Docker complète et lance le smoke test via le gateway. Les cinq images Docker sont publiées sur GHCR (`ghcr.io/<repo>-<service>`) à chaque push sur `main` ou sur un tag `v*`.
+
+## Tests
+
+Chaque service backend possède ses tests : JUnit/Maven pour `event-service`, pytest pour `user-service` et `notification-service`, et GoogleTest/CTest pour `statistics-service`. Le smoke test `scripts/smoke.py` valide l'intégration de tous les services : frontend et gateway, CRUD utilisateur, événements, inscriptions, gRPC de statistiques, RabbitMQ et notifications.
 
 ## Lancer
 

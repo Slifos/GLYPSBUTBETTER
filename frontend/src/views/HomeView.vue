@@ -118,6 +118,7 @@ const leaveEvent = async (event: EventResponse) =>{
     <div class="user-info" v-if="userStore.user">
         <p>Bienvenue, {{ userStore.user?.name }} !</p>
         <button @click="userStore.logout()">Se déconnecter</button>
+        <button @click="router.push('/events/create')">Créer un événement</button>
     </div>
     <div v-else>
         <p>Vous n'êtes pas connecté.</p>
@@ -132,9 +133,10 @@ const leaveEvent = async (event: EventResponse) =>{
 
     <div v-else>
             <article v-for="event in events" :key="event.id">
-                <h3>{{ event.title }}</h3>
-                <p>{{ event.description }}</p>
-                <p>Date: {{ event.startDate }}</p>
+                <h3 @click="router.push({name: 'event-details', params: {id: event.id}})" style="cursor: pointer">
+                    {{ event.title }}
+                </h3>
+                <p>Type: {{ event.eventType }}</p>
                 <p>Lieu: {{ event.location }}</p>
                 <p class="remaining-places"
                 :class="{
@@ -145,11 +147,7 @@ const leaveEvent = async (event: EventResponse) =>{
                 {{ event.remainingPlaces }} places restantes
                 </p>
                 <p>{{ event.currentParticipants }} / {{ event.maxParticipants }} participants</p>
-                
-                <button v-if="!userStore.user" @click="router.push('/login')">Se connecter</button>
-                <button v-else-if="isRegistered(event.id)" :disabled="registeringEventId === event.id" @click="leaveEvent(event)">{{ registeringEventId === event.id ? 'Désinscription...' : 'Se désinscrire' }}</button>
-                <button v-else-if="event.remainingPlaces <= 0" disabled>Complet</button>
-                <button v-else :disabled="registeringEventId === event.id" @click="joinEvent(event)">{{ registeringEventId === event.id ? 'Inscription...' : 'S\'inscrire' }}</button>
+                <button @click="router.push({name: 'event-details', params: {id: event.id}})">Voir les détails</button>
             </article>
     </div>
 </template>

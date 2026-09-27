@@ -6,8 +6,6 @@ services:
       POSTGRES_DB: campusconnect
       POSTGRES_USER: campusconnect
       POSTGRES_PASSWORD: campusconnect
-    ports:
-      - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -21,6 +19,44 @@ services:
     container_name: campusconnect-statistics-service
     ports:
       - "9090:9090"
+
+  rabbitmq:
+    image: rabbitmq:3.13-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: campusconnect
+      RABBITMQ_DEFAULT_PASS: campusconnect
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  notification-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: notifications
+      POSTGRES_USER: notifications
+      POSTGRES_PASSWORD: notifications
+    volumes:
+      - notification-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notifications"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  notification-service:
+    image: ghcr.io/slifos/glypsbutbetter-notification-service:latest
+    environment:
+      DATABASE_URL: postgresql+psycopg://notifications:notifications@notification-db/notifications
+      RABBITMQ_URL: amqp://campusconnect:campusconnect@rabbitmq:5672/
+    ports:
+      - "8002:8000"
+    depends_on:
+      notification-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   event-service:
     image: ghcr.io/slifos/glypsbutbetter-event-service:latest
@@ -36,6 +72,9 @@ services:
       USER_SERVICE_HOST: user-service
       USER_SERVICE_PORT: 8000
       SERVER_PORT: 8081
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: campusconnect
+      RABBITMQ_PASSWORD: campusconnect
     ports:
       - "8081:8081"
     depends_on:
@@ -45,6 +84,8 @@ services:
         condition: service_started
       user-service:
         condition: service_started
+      rabbitmq:
+        condition: service_healthy
 
   user-db:
     image: postgres:16-alpine
@@ -52,6 +93,8 @@ services:
       POSTGRES_DB: users
       POSTGRES_USER: users
       POSTGRES_PASSWORD: users
+    volumes:
+      - user-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U users"]
       interval: 5s
@@ -67,5 +110,19 @@ services:
       user-db:
         condition: service_healthy
 
+  api-gateway:
+    image: ghcr.io/slifos/glypsbutbetter-api-gateway:latest
+    ports:
+      - "8080:80"
+    depends_on:
+      event-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+
 volumes:
   postgres-data:
+  user-data:
+  notification-data:

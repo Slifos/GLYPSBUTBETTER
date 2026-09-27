@@ -4,6 +4,7 @@ import com.campusconnect.event.client.UserClient;
 import com.campusconnect.event.entity.Event;
 import com.campusconnect.event.entity.Registration;
 import com.campusconnect.event.entity.RegistrationStatus;
+import com.campusconnect.event.notification.NotificationMessage;
 import com.campusconnect.event.exception.DuplicateRegistrationException;
 import com.campusconnect.event.exception.EventFullException;
 import com.campusconnect.event.exception.RegistrationNotFoundException;
@@ -12,6 +13,7 @@ import com.campusconnect.event.web.dto.RegistrationResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -29,6 +31,7 @@ public class RegistrationService {
     private final RegistrationRepository registrationRepository;
     private final EventService eventService;
     private final UserClient userClient;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public RegistrationResponse register(Long eventId, Long userId) {
@@ -43,6 +46,10 @@ public class RegistrationService {
                 .ifPresent(existing -> {
                     throw new DuplicateRegistrationException(eventId, userId);
                 });
+        registrationRepository.findByEventIdAndUserIdAndStatus(eventId, userId, RegistrationStatus.ATTENDED)
+                .ifPresent(existing -> {
+                    throw new DuplicateRegistrationException(eventId, userId);
+                });
 
         long current = eventService.countCurrentParticipants(eventId);
         if (current >= event.getMaxParticipants()) {
@@ -50,6 +57,16 @@ public class RegistrationService {
         }
 
         Registration registration = registrationRepository.save(new Registration(event, userId));
+        eventPublisher.publishEvent(NotificationMessage.of(userId, eventId, "REGISTRATION_CONFIRMED",
+                "You are registered for " + event.getTitle()));
+        if (current + 1 == event.getMaxParticipants()) {
+            registrationRepository.findByEventId(eventId).stream()
+                    .filter(r -> r.getStatus() == RegistrationStatus.ACTIVE || r.getStatus() == RegistrationStatus.ATTENDED)
+                    .map(Registration::getUserId)
+                    .distinct()
+                    .forEach(participantId -> eventPublisher.publishEvent(NotificationMessage.of(
+                            participantId, eventId, "EVENT_FULL", event.getTitle() + " is now full")));
+        }
         log.info("User {} registered for event {}", userId, eventId);
         return toResponse(registration);
     }

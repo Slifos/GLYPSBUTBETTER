@@ -4,6 +4,9 @@ import LoginView from '../views/LoginView.vue'
 import EventDetailsView from '../views/EventDetailView.vue'
 import CreateEventView from '../views/CreateEventView.vue'
 import EditEventView from '../views/EditEventView.vue'
+import MyEventView from '../views/MyEventsView.vue'
+import StatisticsDashboardView from '../views/StatisticsDashboardView.vue'
+import CreateUserView from '../views/CreateUserView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -33,6 +36,21 @@ const router = createRouter({
       name: 'create-event',
       component: CreateEventView
     },
+    {
+      path: '/my-events',
+      name: 'my-events',
+      component: MyEventView
+    },
+    {
+      path: '/statistics',
+      name: 'statistics',
+      component: StatisticsDashboardView
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: CreateUserView
+    }
   ],
 })
 

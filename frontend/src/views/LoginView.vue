@@ -60,26 +60,17 @@ const login = async () => {
         <div class="form-group">
           <label for="email">Email</label>
 
-          <input
-            id="email"
-            v-model="email"
-            type="email"
-            placeholder="exemple@campus.fr"
-            autocomplete="email"
-          />
+          <input id="email" v-model="email" type="email" placeholder="exemple@campus.fr" autocomplete="email"/>
         </div>
 
         <p v-if="error" class="error">
           {{ error }}
         </p>
 
-        <button
-          type="submit"
-          :disabled="loading"
-        >
-          {{ loading ? 'Connexion...' : 'Se connecter' }}
-        </button>
+        <button type="submit" :disabled="loading">{{ loading ? 'Connexion...' : 'Se connecter' }}</button>
       </form>
+
+      <p>Pas encore de compte ? <RouterLink to="/register">Créer un compte</RouterLink></p>
     </div>
   </main>
 </template>

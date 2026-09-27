@@ -90,5 +90,3 @@ Pour lancer sans rien build (images déjà publiées sur GHCR par la CI) :
 ```
 docker compose -f docker-compose.images.yml up
 ```
-
-Les images `api-gateway` et `notification-service` n'existent sur GHCR qu'après la publication de cette branche sur `main` ou via un tag `v*`.

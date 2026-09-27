@@ -9,7 +9,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 
-base_url = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "http://localhost:8080"
+base_url = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "http://localhost:8083"
 
 
 def request(method, path, body=None):

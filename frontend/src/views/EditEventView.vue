@@ -94,55 +94,19 @@ onMounted(() => {
 </script>
 
 <template>
-  <main>
-    <button @click="router.push({name: 'event-details',params: { id: eventId }})">Retour à l'événement</button>
-
-    <h1>Modifier l'événement</h1>
-
-    <p v-if="loading">Chargement...</p>
-
-    <p v-else-if="error && !event">{{ error }}</p>
-
-    <form v-else @submit.prevent="updateEvent">
-      <div>
-        <label for="title">Titre</label>
-
-        <input id="title" v-model="title" type="text"/>
-      </div>
-
-      <div>
-        <label for="eventType"> Type d'événement</label>
-
-        <input id="eventType" v-model="eventType" type="text"/>
-      </div>
-
-      <div>
-        <label for="description">Description</label>
-
-        <textarea id="description" v-model="description" rows="5"></textarea>
-      </div>
-
-      <div>
-        <label for="location">Lieu</label>
-
-        <input id="location" v-model="location" type="text"/>
-      </div>
-
-      <div>
-        <label for="startDate">Date et heure</label>
-
-        <input id="startDate" v-model="startDate" type="datetime-local"/>
-      </div>
-
-      <div>
-        <label for="maxParticipants">Nombre maximum de participants</label>
-
-        <input id="maxParticipants" v-model.number="maxParticipants" type="number" min="1"/>
-      </div>
-      
-      <p v-if="error">{{ error }}</p>
-
-      <button type="submit" :disabled="saving">{{saving ? 'Enregistrement...' : 'Enregistrer les modifications'}}</button>
+  <main class="page container">
+    <RouterLink class="back-link" :to="{name:'event-details',params:{id:eventId}}">← Retour à l'événement</RouterLink>
+    <div class="page-heading"><span class="eyebrow">Mise à jour</span><h1>Modifier l'événement<span style="color:var(--orange)">.</span></h1><p>Modifie les informations de l’événement.</p></div>
+    <p v-if="loading" class="notice">Chargement...</p>
+    <p v-else-if="error && !event" class="notice notice--error" role="alert">{{ error }}</p>
+    <form v-else class="event-form form-card surface" @submit.prevent="updateEvent">
+      <div class="field field--wide"><label for="title">Nom de l'événement</label><input id="title" v-model="title" type="text" required /></div>
+      <div class="field"><label for="eventType">Catégorie</label><input id="eventType" v-model="eventType" type="text" required /></div>
+      <div class="field"><label for="location">Lieu</label><input id="location" v-model="location" type="text" /></div>
+      <div class="field field--wide"><label for="description">Description</label><textarea id="description" v-model="description" rows="5"></textarea></div>
+      <div class="field"><label for="startDate">Date et heure</label><input id="startDate" v-model="startDate" type="datetime-local" required /></div>
+      <div class="field"><label for="maxParticipants">Nombre de places</label><input id="maxParticipants" v-model.number="maxParticipants" type="number" min="1" required /></div>
+      <div class="form-actions"><p v-if="error" class="notice notice--error" role="alert">{{ error }}</p><button class="button" type="submit" :disabled="saving">{{ saving ? 'Enregistrement...' : 'Enregistrer les modifications' }} <span aria-hidden="true">→</span></button><RouterLink class="text-link" :to="{name:'event-details',params:{id:eventId}}">Annuler</RouterLink></div>
     </form>
   </main>
 </template>

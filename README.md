@@ -77,13 +77,21 @@ Chaque service backend possède ses tests : JUnit/Maven pour `event-service`, py
 docker compose up
 ```
 
-Ouvrir `http://localhost:8080`. L'API passe par le même hôte sous `/api`. Pour vérifier les parcours utilisateurs, événements, inscriptions, statistiques et notifications :
-
-```
-python scripts/smoke.py
-```
+Ouvrir `http://localhost:8083`. L'API passe par le même hôte sous `/api`. Le port peut être changé avec `GATEWAY_PORT` si nécessaire.
 
 La connexion actuelle par email est une fonctionnalité de démonstration : elle ne vérifie pas l'identité de l'utilisateur. Les notifications sont livrées après validation de l'inscription et peuvent prendre quelques secondes.
+
+### Vérifier l’instance
+
+```sh
+docker compose ps
+curl http://localhost:8083/api/events
+python3 scripts/smoke.py
+```
+
+Le smoke test crée deux utilisateurs et un événement de test dans les bases de données. Il vérifie aussi les inscriptions, les statistiques via gRPC et les notifications via RabbitMQ. Dans l’interface, ouvre `http://localhost:8083`, crée un compte depuis « Se connecter », puis inscris-toi à un événement et consulte la section Notifications.
+
+Le tableau de bord des statistiques est accessible sur `http://localhost:8083/statistics`. Le frontend est compilé dans l’image `api-gateway` ; il n’a pas de conteneur distinct. Les trois bases PostgreSQL sont utilisées respectivement par les services événements, utilisateurs et notifications.
 
 Pour lancer sans rien build (images déjà publiées sur GHCR par la CI) :
 

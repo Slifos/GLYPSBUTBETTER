@@ -113,7 +113,7 @@ services:
   api-gateway:
     image: ghcr.io/slifos/glypsbutbetter-api-gateway:latest
     ports:
-      - "8080:80"
+      - "${GATEWAY_PORT:-8083}:80"
     depends_on:
       event-service:
         condition: service_started
